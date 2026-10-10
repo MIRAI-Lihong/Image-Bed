@@ -18,10 +18,31 @@ type CopyFormat = (typeof COPY_FORMATS)[number]['format']
 const items = ref<UploadItem[]>([])
 const fileInput = ref<HTMLInputElement | null>(null)
 const copiedKey = ref<string | null>(null)
+const isDragging = ref(false)
 const uploader = createImageUploader()
 
 function triggerFileSelect(): void {
   fileInput.value?.click()
+}
+
+/** 拖拽经过时持续触发；preventDefault 是允许 drop 的前提 */
+function onDragOver(event: DragEvent): void {
+  event.preventDefault()
+  isDragging.value = true
+}
+
+/** 经过子元素边界时也会触发 dragleave，只在真正离开上传区时才取消高亮 */
+function onDragLeave(event: DragEvent): void {
+  const zone = event.currentTarget
+  if (!(zone instanceof Node)) return
+  if (zone.contains(event.relatedTarget as Node | null)) return
+  isDragging.value = false
+}
+
+async function onDrop(event: DragEvent): Promise<void> {
+  event.preventDefault()
+  isDragging.value = false
+  await addFiles(Array.from(event.dataTransfer?.files ?? []))
 }
 
 async function onFilesSelected(event: Event): Promise<void> {
@@ -91,8 +112,22 @@ async function copyLink(item: UploadItem, format: CopyFormat): Promise<void> {
 
 <template>
   <section class="panel uploader">
-    <div class="select-area">
-      <button type="button" class="primary-btn" @click="triggerFileSelect">选择图片</button>
+    <div
+      class="dropzone"
+      :class="{ 'dropzone-active': isDragging, 'dropzone-compact': items.length > 0 }"
+      role="button"
+      tabindex="0"
+      @click="triggerFileSelect"
+      @keydown.enter="triggerFileSelect"
+      @dragover="onDragOver"
+      @dragleave="onDragLeave"
+      @drop="onDrop"
+    >
+      <svg class="dropzone-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 15V4m0 0L8 8m4-4l4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M4 20h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+      </svg>
+      <p class="dropzone-title">{{ items.length > 0 ? '继续添加图片' : '点击选择或拖拽图片到此处' }}</p>
       <p class="hint">支持 PNG / JPG / GIF / WebP，可多选</p>
       <input
         ref="fileInput"
@@ -105,16 +140,30 @@ async function copyLink(item: UploadItem, format: CopyFormat): Promise<void> {
     </div>
 
     <ul v-if="items.length" class="upload-list">
-      <li v-for="item in items" :key="item.id" class="upload-item">
+      <li v-for="item in items" :key="item.id" :class="['upload-item', `upload-item-${item.status}`]">
         <img v-if="item.previewUrl" :src="item.previewUrl" :alt="item.fileName" class="thumb" />
         <div v-else class="thumb thumb-invalid" aria-hidden="true"></div>
 
         <div class="meta">
           <p class="name">{{ item.fileName }}</p>
           <p class="size">{{ formatFileSize(item.fileSize) }}</p>
-          <p v-if="item.status === 'uploading'" class="status status-uploading">上传中…</p>
-          <p v-else-if="item.status === 'success'" class="status status-success">上传成功</p>
-          <p v-else-if="item.error" class="status status-error">{{ item.error }}</p>
+          <p v-if="item.status === 'uploading'" class="status status-uploading">
+            <span class="status-icon" aria-hidden="true"></span>上传中…
+          </p>
+          <p v-else-if="item.status === 'success'" class="status status-success">
+            <span class="status-icon" aria-hidden="true"></span>上传成功
+          </p>
+          <p v-else-if="item.error" class="status status-error">
+            <span class="status-icon" aria-hidden="true"></span>{{ item.error }}
+          </p>
+          <a
+            v-if="item.status === 'success' && item.result"
+            class="url"
+            :href="item.result.url"
+            target="_blank"
+            rel="noopener"
+            :title="item.result.url"
+          >{{ item.result.url }}</a>
         </div>
 
         <div class="actions">
