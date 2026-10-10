@@ -1,10 +1,11 @@
 /**
  * 上传服务：对象 key 生成、公共 URL 构造、上传器。
  *
- * 当前使用 mock 上传器打通链路；接入真实 OSS 时在
- * createImageUploader 中替换为基于 STS 临时凭证的直传实现。
+ * 生产环境使用 ali-oss 直传（基于 STS 临时凭证）；
+ * mock 上传器保留给测试与本地无凭证联调使用。
  */
 
+import OSS from 'ali-oss'
 import type { UploadAuthorization } from '../types/image'
 import { fileExtension } from '../utils/file'
 
@@ -76,12 +77,37 @@ export function createMockImageUploader(delayMs = 500): ImageUploader {
   }
 }
 
+/** ali-oss 直传实现：使用授权接口下发的 STS 临时凭证构造客户端 */
+export function createAliyunOssUploader(): ImageUploader {
+  return {
+    async upload(file: File, auth: UploadAuthorization): Promise<UploadedImage> {
+      const client = new OSS({
+        region: auth.region,
+        bucket: auth.bucket,
+        accessKeyId: auth.credentials.accessKeyId,
+        accessKeySecret: auth.credentials.accessKeySecret,
+        stsToken: auth.credentials.securityToken,
+        // 授权缓存会在过期前重新申请，无需 SDK 内置刷新
+        refreshSTSTokenInterval: 0,
+      })
+
+      const objectKey = buildObjectKey(auth.uploadPrefix, file.name, generateUniqueId())
+      await client.put(objectKey, file)
+
+      return {
+        name: file.name,
+        size: file.size,
+        objectKey,
+        url: buildPublicUrl(auth.region, auth.bucket, objectKey),
+      }
+    },
+  }
+}
+
 /**
- * 上传器工厂。
- *
- * 当前返回 mock 实现；接入真实 OSS 时在此处创建基于
- * auth.credentials 临时凭证的直传客户端（如 ali-oss）。
+ * 上传器工厂：生产环境使用 ali-oss 直传。
+ * mock 实现保留给测试与本地联调使用。
  */
 export function createImageUploader(): ImageUploader {
-  return createMockImageUploader()
+  return createAliyunOssUploader()
 }

@@ -8,6 +8,7 @@ const validSource: Record<string, string> = {
   OSS_REGION: 'oss-cn-hangzhou',
   OSS_BUCKET: 'test-bucket',
   OSS_UPLOAD_PREFIX: 'uploads/',
+  ALIBABA_CLOUD_STS_ROLE_ARN: 'acs:ram::1234567890:role/test-role',
 }
 
 describe('loadServerEnv', () => {
@@ -20,6 +21,7 @@ describe('loadServerEnv', () => {
       region: 'oss-cn-hangzhou',
       bucket: 'test-bucket',
       uploadPrefix: 'uploads/',
+      stsRoleArn: 'acs:ram::1234567890:role/test-role',
     })
   })
 

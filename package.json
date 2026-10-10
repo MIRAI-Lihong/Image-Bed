@@ -13,9 +13,13 @@
     "validate": "npm run typecheck && npm run lint && npm run test && npm run build"
   },
   "dependencies": {
+    "@alicloud/openapi-client": "^0.4.15",
+    "@alicloud/sts20150401": "^1.2.0",
+    "ali-oss": "^6.23.0",
     "vue": "^3.5.42"
   },
   "devDependencies": {
+    "@types/ali-oss": "^6.23.3",
     "@types/node": "^24.13.3",
     "@vitejs/plugin-vue": "^6.0.8",
     "@vue/eslint-config-typescript": "^14.9.0",

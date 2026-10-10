@@ -17,6 +17,8 @@ export interface ServerEnv {
   readonly bucket: string
   /** 上传对象强制前缀，例如 uploads/ */
   readonly uploadPrefix: string
+  /** STS AssumeRole 目标角色 ARN，例如 acs:ram::1234567890:role/image-bed-uploader */
+  readonly stsRoleArn: string
 }
 
 /** 环境变量缺失错误：message 只包含变量名，绝不包含任何变量值 */
@@ -37,6 +39,7 @@ const ENV_KEYS = {
   region: 'OSS_REGION',
   bucket: 'OSS_BUCKET',
   uploadPrefix: 'OSS_UPLOAD_PREFIX',
+  stsRoleArn: 'ALIBABA_CLOUD_STS_ROLE_ARN',
 } as const satisfies Record<keyof ServerEnv, string>
 
 /** 空字符串或纯空白视为未配置 */

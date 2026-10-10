@@ -12,7 +12,8 @@ const validEnv: Record<string, string> = {
   ALIBABA_CLOUD_ACCESS_KEY_SECRET: 'server-long-term-sk',
   OSS_REGION: 'oss-cn-hangzhou',
   OSS_BUCKET: 'test-bucket',
-  OSS_UPLOAD_PREFIX: 'uploads/'
+  OSS_UPLOAD_PREFIX: 'uploads/',
+  ALIBABA_CLOUD_STS_ROLE_ARN: 'acs:ram::1234567890:role/test-role'
 }
 
 /** 固定基准时间，保证 mock 凭证过期时间可断言 */
