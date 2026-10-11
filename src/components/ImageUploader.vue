@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { markRaw, reactive, ref } from 'vue'
+import { markRaw, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { authorizationClient } from '../services/authorization'
+import type { NewHistoryItem } from '../services/history'
 import { createImageUploader } from '../services/upload'
 import type { UploadItem } from '../types/image'
 import { copyText } from '../utils/clipboard'
-import { formatFileSize, validateImageFile } from '../utils/file'
+import { extractPasteImages, formatFileSize, validateImageFile } from '../utils/file'
 import { toHtml, toMarkdown } from '../utils/formats'
 
 const COPY_FORMATS = [
@@ -14,6 +15,9 @@ const COPY_FORMATS = [
 ] as const
 
 type CopyFormat = (typeof COPY_FORMATS)[number]['format']
+
+/** 上传成功后通知父组件写入历史记录 */
+const emit = defineEmits<{ uploaded: [record: NewHistoryItem] }>()
 
 const items = ref<UploadItem[]>([])
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -52,6 +56,19 @@ async function onFilesSelected(event: Event): Promise<void> {
   await addFiles(files)
 }
 
+/**
+ * 全局粘贴上传：剪贴板中的图片复用 addFiles 链路；非图片内容静默忽略。
+ * paste 事件仅在页面获得焦点时触发，页面失焦时天然不响应。
+ */
+async function onPaste(event: ClipboardEvent): Promise<void> {
+  const files = extractPasteImages(event.clipboardData)
+  if (files.length === 0) return
+  await addFiles(files)
+}
+
+onMounted(() => document.addEventListener('paste', onPaste))
+onUnmounted(() => document.removeEventListener('paste', onPaste))
+
 async function addFiles(files: File[]): Promise<void> {
   for (const file of files) {
     const validationError = validateImageFile(file)
@@ -81,6 +98,13 @@ async function startUpload(item: UploadItem): Promise<void> {
     const uploaded = await uploader.upload(item.file, auth)
     item.status = 'success'
     item.result = { objectKey: uploaded.objectKey, url: uploaded.url }
+    emit('uploaded', {
+      url: uploaded.url,
+      objectKey: uploaded.objectKey,
+      fileName: item.fileName,
+      size: item.fileSize,
+      uploadedAt: new Date().toISOString(),
+    })
   } catch (error) {
     item.status = 'error'
     item.error = error instanceof Error ? error.message : String(error)
@@ -128,7 +152,7 @@ async function copyLink(item: UploadItem, format: CopyFormat): Promise<void> {
         <path d="M4 20h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
       </svg>
       <p class="dropzone-title">{{ items.length > 0 ? '继续添加图片' : '点击选择或拖拽图片到此处' }}</p>
-      <p class="hint">支持 PNG / JPG / GIF / WebP，可多选</p>
+      <p class="hint">支持 PNG / JPG / GIF / WebP，可多选，支持 Ctrl+V 粘贴</p>
       <input
         ref="fileInput"
         type="file"

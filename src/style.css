@@ -363,3 +363,29 @@ li + li {
 .retry-btn:hover {
   background: rgba(248, 113, 113, 0.12);
 }
+
+/* ---------- 上传历史 ---------- */
+
+.history h2 {
+  margin-bottom: 4px;
+}
+
+.remove-btn {
+  padding: 6px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 8px;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.remove-btn:hover {
+  border-color: rgba(248, 113, 113, 0.4);
+  background: rgba(248, 113, 113, 0.12);
+  color: #f87171;
+}
