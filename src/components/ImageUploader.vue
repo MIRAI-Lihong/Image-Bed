@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { markRaw, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { computed, markRaw, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { authorizationClient } from '../services/authorization'
 import type { NewHistoryItem } from '../services/history'
 import { createImageUploader } from '../services/upload'
@@ -132,6 +132,28 @@ async function copyLink(item: UploadItem, format: CopyFormat): Promise<void> {
     }, 1500)
   }
 }
+
+/** 最近一次上传成功的条目：手机端高频场景是一传完就复制 Markdown */
+const latestSuccess = computed<UploadItem | null>(() => {
+  for (let i = items.value.length - 1; i >= 0; i--) {
+    const item = items.value[i]
+    if (item?.status === 'success' && item.result) return item
+  }
+  return null
+})
+
+const quickCopied = ref(false)
+
+async function copyLatestMarkdown(): Promise<void> {
+  const item = latestSuccess.value
+  if (!item?.result) return
+  if (await copyText(toMarkdown(item.result.url, item.fileName))) {
+    quickCopied.value = true
+    setTimeout(() => {
+      quickCopied.value = false
+    }, 1500)
+  }
+}
 </script>
 
 <template>
@@ -213,5 +235,14 @@ async function copyLink(item: UploadItem, format: CopyFormat): Promise<void> {
         </div>
       </li>
     </ul>
+
+    <button
+      v-if="latestSuccess"
+      type="button"
+      class="quick-copy-btn"
+      @click="copyLatestMarkdown"
+    >
+      {{ quickCopied ? '已复制 Markdown' : '复制最新图片 Markdown' }}
+    </button>
   </section>
 </template>
